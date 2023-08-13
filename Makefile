@@ -10,10 +10,9 @@ final: gofish.o
 gofish.o: gofish.s
 	@echo "\n\033[0;92;1mCompiling gofish.s\033[22;2m"
 	as --gstabs -o gofish.o gofish.s
-	gcc $(CFLAGS) gofish.o -g -o gofish
 	@echo "\033[0m---"
 
 clean:
 	@echo "\n\033[0;31;1mRemoving everything but source files\033[22;2m"
-	rm -f gofish gofish.s
+	rm -f gofish.o final
 	@echo "\033[0m---"
