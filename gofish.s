@@ -2,10 +2,13 @@
 .syntax unified
 
 .equ CARDS, 52
+.equ SPACE, 32           // ASCII for ' '
 
 // TO DO: print outputs to text logfile
 // TO DO: separate functions to separate files
 .data
+deck: .space 52
+sortedDeck: .asciz "222233334444555566667777888899990000JJJJQQQQKKKKAAAA" // 0 refers to the 10 card
 
 .text
 .global main
@@ -18,11 +21,7 @@ main:
 
 	add fp, sp, #4       // Set frame pointer
 
-	mov r0, #50
-	mov r1, #60
-	bl randnum
-
-	bl shuffle
+	bl initDeck          // Initialize the deck
 	bl deal
 
 done:
@@ -34,32 +33,40 @@ done:
 	add sp, sp, #8       // Move sp back in place
 	bx lr                // Return to caller
 
-shuffle:
+
+
+// Initializes the deck in a random order
+initDeck:
+// Accomplishes this by selecting a random card from the 'sorted' deck
+// and writing it to the next spot in the deck
 	mov r10, lr
-	mov r4, #0           // i = 0
+
+	mov r4, #52          // r4 = # cards in sortedDeck
+	ldr r5, =sortedDeck  // r5 points to start of sortedDeck
 
 // Initialize random generator with srand(time(0))
 	mov r0, #0
 	bl time
 	bl srand
 
-shLoop:
-	cmp r4, CARDS-2      // break if i > n-2
-	bgt shEnd
+idLoop:
+	mov r0, #0           // min = 0
+	mov r1, r4           // max = # of remaining cards in sortedDeck
+	bl randNum
+	bl popCard           // Pass random number to popCard
 
-	
+	b idLoop
 
-	add r4, r4, #1       // i++
-	b shLoop
-
-shEnd:
+idEnd:
 	mov lr, r10
 	bx lr
+
+
 
 // Random number generator (srand(time(0)) must be called first)
 // PARAMETERS r0: min, r1: max (both inclusive)
 // RETURNS    r0: random number
-randnum:
+randNum:
 // Prologue
 	sub sp, sp, #20      // Allocate space for registers
 	str r4, [sp, #0]     // Load registers into stack
@@ -87,9 +94,57 @@ randnum:
 	add sp, sp, #20      // Move sp back in place
 	bx lr
 
-//for i from 0 to n−2 do
-//     j ← random integer such that i ≤ j < n
-//     exchange a[i] and a[j]
+
+
+// Pops Nth card from the deck, and shifts all later cards to the left, to close the gap
+// PARAMETERS r0: card index (starting with 0)
+// RETURNS    r0: character representing card
+popCard: // TO DO: test what happens if card at N is " "
+// Prologue
+	sub sp, sp, #24      // Allocate space for registers
+	str r4, [sp, #0]     // Load registers into stack
+	str r5, [sp, #4]
+	str r6, [sp, #8]
+	str r8, [sp, #12]
+	str fp, [sp, #16]
+	str lr, [sp, #20]
+	add fp,  sp, #20     // Set fp
+
+	mov r4, #0           // r4 = current card #
+	ldr r5, =sortedDeck  // r5 points to start of sortedDeck
+	mov r6, SPACE        // r6 will hold char representing the card
+
+pcLoop:
+	cmp r4, r0           // Check if reached correct index
+	blt pcLoopIncr       // If less than index, continue loop
+
+	ldrbeq r6, [r5]      // If EQUAL to index, hold card's character
+	ldrb r8, [r5,+1]     // Load next char
+
+	cmp r8, #0           // If it's a NUL character
+	moveq r8, SPACE      // replace it with a SPACE
+	strb  r8, [r5]       // Either way, replace this char with the next
+	beq   pcLoopEnd      // If the char was NUL, break loop
+
+pcLoopIncr:
+	add r4, r4, #1       // Increment counter
+	add r5, r5, #1       // Increment pointer
+	b pcLoop
+
+pcLoopEnd:
+	mov r0, r6
+
+// Epilogue
+	ldr r4, [sp, #0]     // Restore registers from stack
+	ldr r5, [sp, #4]
+	ldr r6, [sp, #8]
+	ldr r8, [sp, #12]
+	ldr fp, [sp, #16]
+	ldr lr, [sp, #20]
+	add sp, sp, #24      // Move sp back in place
+	bx lr
+
+
 
 deal:
 	mov r10, lr
