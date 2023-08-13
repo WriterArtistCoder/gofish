@@ -51,7 +51,8 @@ initDeck:
 
 idLoop:
 	mov r0, #0           // min = 0
-	mov r1, r4           // max = # of remaining cards in sortedDeck
+	mov r1, r4           // max = # of remaining cards in sortedDeck - 1
+	sub r4, r4, #1
 	bl randNum
 	bl popCard           // Pass random number to popCard
 	strb r0, [r5]        // Load popped card to deck
@@ -104,14 +105,6 @@ randNum:
 // PARAMETERS r0: card index (starting with 0)
 // RETURNS    r0: character representing card
 popCard: // TO DO: test what happens if card at N is " "
-
-// TO DO:
-// Bug from 967a56 seems to be fixed?
-// Another bug: sometimes no cards are popped and a space is returned
-
-// This happens because randNum has failed and produced a number outside
-// the proper range, usually just 1 to the right of proper range
-
 // Prologue
 	sub sp, sp, #24      // Allocate space for registers
 	str r4, [sp, #0]     // Load registers into stack
