@@ -6,9 +6,22 @@
 
 // TO DO: print outputs to text logfile
 // TO DO: separate functions to separate files
+// TO DO: double check documentation
 .data
-deck: .space 53          // Last char is unfilled, is a NUL character
-sortedDeck: .asciz "222233334444555566667777888899990000JJJJQQQQKKKKAAAA " // 0 refers to the 10 card
+
+// Decks, which are closed with a space and NUL character, and are filled with spaces when empty
+mainDeck:    .asciz "                                                     "
+sortedDeck:  .asciz "222233334444555566667777888899990000JJJJQQQQKKKKAAAA " // 0 refers to the 10 card
+p1Hand:      .asciz "                                                "
+p2Hand:      .asciz "                                                "
+
+printDeck:   .asciz "Deck: %s\n"
+printP1:     .asciz "\033[0;93mYOU: \033[0m "
+printP1Deck: .asciz "\033[0;93mYOU: \033[0m %s\n"
+printP2:     .asciz "\033[0;95mCPU: \033[0m "
+printP2Deck: .asciz "\033[0;95mCPU: \033[0m %s\n"
+
+newline:    .asciz "\n"
 
 .text
 .global main
@@ -22,7 +35,23 @@ main:
 	add fp, sp, #4       // Set frame pointer
 
 	bl initDeck          // Initialize the deck
+	ldr r0, =printDeck   // And print it
+	ldr r1, =mainDeck
+	bl printf
+
 	bl deal
+// Print player's hand
+	ldr r0, =printP1Deck
+	ldr r1, =p1Hand
+	bl printf
+// Print CPU's hand
+	ldr r0, =printP2Deck
+	ldr r1, =p2Hand
+	bl printf
+// Print main deck
+	ldr r0, =printDeck
+	ldr r1, =mainDeck
+	bl printf
 
 done:
 // Epilogue
@@ -36,13 +65,16 @@ done:
 
 
 // Initializes the deck in a random order
+// PARAMETERS None
+// RETURNS    None
 initDeck:
 // Accomplishes this by selecting a random card from the 'sorted' deck
 // and writing it to the next spot in the deck
-	mov r10, lr
+	mov r10, lr          // 'Mini' prologue
 
 	mov r4, #52          // r4 = # cards in sortedDeck
-	ldr r5, =deck        // r5 points to start of actual deck
+	ldr r5, =mainDeck    // r5 points to main deck
+	ldr r6, =sortedDeck  // r6 points to sortedDeck
 
 // Initialize random generator with srand(time(0))
 	mov r0, #0
@@ -54,19 +86,20 @@ idLoop:
 	mov r1, r4           // max = # of remaining cards in sortedDeck - 1
 	sub r1, r1, #1
 	bl randNum
-	bl popCard           // Pass random number to popCard
+
+	mov r1, r6           // Pass r1 = pointer to sortedDeck
+	bl popCard           // Pass r0 = random number to popCard
 	strb r0, [r5]        // Load popped card to deck
-	                     // TO DO: Fix bug where " " has been loaded into deck
 
 	sub r4, r4, #1
 	add r5, r5, #1
 
 	cmp r4, #0           // Break loop when 0 cards remain in sortedDeck
-	beq idEnd
+	beq idLoopEnd
 	b idLoop
 
-idEnd:
-	mov lr, r10
+idLoopEnd:
+	mov lr, r10          // 'Mini' epilogue
 	bx lr
 
 
@@ -104,10 +137,10 @@ randNum:
 
 
 
-// Pops Nth card from the deck, and shifts all later cards to the left, to close the gap
-// PARAMETERS r0: card index (starting with 0)
+// Pops Nth card from a deck, and shifts all later cards to the left, to close the gap
+// PARAMETERS r0: card index (starting with 0), r1: pointer to the deck
 // RETURNS    r0: character representing card
-popCard: // TO DO: test what happens if card at N is " "
+popCard:
 // Prologue
 	sub sp, sp, #24      // Allocate space for registers
 	str r4, [sp, #0]     // Load registers into stack
@@ -119,7 +152,7 @@ popCard: // TO DO: test what happens if card at N is " "
 	add fp,  sp, #20     // Set fp
 
 	mov r4, #0           // r4 = current card #
-	ldr r5, =sortedDeck  // r5 points to start of sortedDeck
+	mov r5, r1           // r5 points to the deck in question
 	mov r6, SPACE        // r6 will hold char representing the card
 
 pcLoop:
@@ -151,11 +184,40 @@ pcLoopEnd:
 	bx lr
 
 
-
+// Deals 5 cards to each hand from mainDeck, alternating between hands
+// PARAMETERS None
+// RETURNS    None
 deal:
-	mov r10, lr
-	// TO DO: implement
-	mov lr, r10
+	mov r10, lr          // 'Mini' prologue
+	ldr r4, =p1Hand      // r4 points to player's hand
+	ldr r5, =p2Hand      // r5 points to CPU's hand
+	ldr r6, =mainDeck    // r6 points to main deck
+
+	mov r8, #0           // Counter
+
+dealLoop:
+// Take card from deck and deal to player
+	mov r0, #0           // r0 = take first (0th) card
+	mov r1, r6           // r1 = from mainDeck
+	bl popCard
+	strb r0, [r4]        // Write card to p1Hand
+	add r4, r4, #1       // Increment p1Hand pointer
+	add r8, r8, #1       // Increment counter
+
+// Take card from deck and deal to CPU
+	mov r0, #0           // r0 = take first (0th) card
+	mov r1, r6           // r1 = from mainDeck
+	bl popCard
+	strb r0, [r5]        // Write card to p2Hand
+	add r5, r5, #1       // Increment p2Hand pointer
+	add r8, r8, #1       // Increment counter
+
+	cmp r8, #10          // Break when 10 cards have been dealt in total
+	beq dealLoopEnd
+	b dealLoop
+
+dealLoopEnd:
+	mov lr, r10          // 'Mini' epilogue
 	bx lr
 
 /*
