@@ -60,6 +60,9 @@ idLoop:
 
 	sub r4, r4, #1
 	add r5, r5, #1
+
+	cmp r4, #0           // Break loop when 0 cards remain in sortedDeck
+	beq idEnd
 	b idLoop
 
 idEnd:
