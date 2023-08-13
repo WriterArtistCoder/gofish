@@ -1,13 +1,17 @@
 @ gofish.s
 .syntax unified
 
-.equ CARDS, 52
-.equ SPACE, 32           // ASCII for ' '
+.equ CARDS,         52
+.equ SPACE,         32   // ASCII for ' '
+.equ INPUT_SPACE,   48   // Space for holding input (high in case user enters too many chars)
+                         // Should be divisible by 4
 
 // TO DO: print outputs to text logfile
 // TO DO: separate functions to separate files
 // TO DO: double check documentation
 .data
+input:       .space INPUT_SPACE
+inputErr:    .asciz "\033[91mFatal error: you entered too many characters and corrupted memory >:|\033[0m\n"
 
 // Decks, which are closed with a space and NUL character, and are filled with spaces when empty
 mainDeck:    .asciz "                                                     "
@@ -15,13 +19,14 @@ sortedDeck:  .asciz "222233334444555566667777888899990000JJJJQQQQKKKKAAAA " // 0
 p1Hand:      .asciz "                                                "
 p2Hand:      .asciz "                                                "
 
-printDeck:   .asciz "Deck: %s\n"
-printP1:     .asciz "\033[0;93mYOU: \033[0m "
-printP1Deck: .asciz "\033[0;93mYOU: \033[0m %s\n"
-printP2:     .asciz "\033[0;95mCPU: \033[0m "
-printP2Deck: .asciz "\033[0;95mCPU: \033[0m %s\n"
+printDeck:   .asciz "\033[2mDECK: \033[0m%s\n"
+printP1Deck: .asciz " \033[93mYOU: \033[0m%s\n"
+printP2Deck: .asciz " \033[95mCPU: \033[0m%s\n"
 
-newline:    .asciz "\n"
+promptRank:  .asciz " \033[93;3mYou \033[0;3mask if the other player has a <2-10/J/Q/K/A>: \033[0m"
+pcts:        .asciz " %s"
+
+newline:     .asciz "\n"
 
 .text
 .global main
@@ -52,6 +57,13 @@ main:
 	ldr r0, =printDeck
 	ldr r1, =mainDeck
 	bl printf
+
+// Print \n
+	ldr r0, =newline
+	bl printf
+
+// Prompt player to ask CPU for a rank
+	bl getRank
 
 done:
 // Epilogue
@@ -101,6 +113,106 @@ idLoop:
 idLoopEnd:
 	mov lr, r10          // 'Mini' epilogue
 	bx lr
+
+
+
+// Deals 5 cards to each hand from mainDeck, alternating between hands
+// PARAMETERS None
+// RETURNS    None
+deal:
+	mov r10, lr          // 'Mini' prologue
+	ldr r4, =p1Hand      // r4 points to player's hand
+	ldr r5, =p2Hand      // r5 points to CPU's hand
+	ldr r6, =mainDeck    // r6 points to main deck
+
+	mov r8, #0           // Counter
+
+dealLoop:
+// Take card from deck and deal to player
+	mov r0, #0           // r0 = take first (0th) card
+	mov r1, r6           // r1 = from mainDeck
+	bl popCard
+	strb r0, [r4]        // Write card to p1Hand
+	add r4, r4, #1       // Increment p1Hand pointer
+	add r8, r8, #1       // Increment counter
+
+// Take card from deck and deal to CPU
+	mov r0, #0           // r0 = take first (0th) card
+	mov r1, r6           // r1 = from mainDeck
+	bl popCard
+	strb r0, [r5]        // Write card to p2Hand
+	add r5, r5, #1       // Increment p2Hand pointer
+	add r8, r8, #1       // Increment counter
+
+	cmp r8, #10          // Break when 10 cards have been dealt in total
+	beq dealLoopEnd
+	b dealLoop
+
+dealLoopEnd:
+	mov lr, r10          // 'Mini' epilogue
+	bx lr
+
+
+
+// Prompts the player to ask for a rank.
+// PARAMETERS None
+// RETURNS    r0: rank
+getRank:
+	mov r10, lr          // 'Mini' prologue
+
+	ldr r4, =input       // r4 points to temporary input storage
+	bl clearInput
+
+	ldr r0, =promptRank
+	bl printf
+
+	ldr r0, =pcts
+	mov r1, r4
+	bl scanf
+
+// Check that user has not entered too many chars, corrupting data
+	add r4, r4, INPUT_SPACE-1 // Move pointer to last char
+	ldrb r5, [r4]
+	cmp r5, #0                // Check that last char is NUL
+	bne throwInputErr
+	sub r4, r4, INPUT_SPACE-1 // Move pointer back
+
+// Check that input is valid
+	// TO DO: implement
+	// START ON THIS!
+
+	mov lr, r10          // 'Mini' epilogue
+	bx lr
+
+
+// Clears all data in the 'input' variable
+// TO DO: test if this works correctly
+// PARAMETERS None
+// RETURNS    None
+clearInput:
+	ldr r0, =input       // r0 = pointer to end of 'input'
+	add r0, r0, INPUT_SPACE-1
+	ldr r1, =input       // r1 = pointer to 'input'
+	mov r2, #0           // r1 = NUL
+
+ciLoop:
+	strb r2, [r1]
+	add r1, r1, #4
+	cmp r1, r0
+	blt ciLoop
+
+ciLoopEnd:
+	bx lr
+
+
+
+// Throws input error and exits program
+// PARAMETERS None
+// RETURNS    None
+throwInputErr:
+	ldr r0, =inputErr
+	bl printf
+	b done
 
 
 
@@ -181,43 +293,6 @@ pcLoopEnd:
 	ldr fp, [sp, #16]
 	ldr lr, [sp, #20]
 	add sp, sp, #24      // Move sp back in place
-	bx lr
-
-
-// Deals 5 cards to each hand from mainDeck, alternating between hands
-// PARAMETERS None
-// RETURNS    None
-deal:
-	mov r10, lr          // 'Mini' prologue
-	ldr r4, =p1Hand      // r4 points to player's hand
-	ldr r5, =p2Hand      // r5 points to CPU's hand
-	ldr r6, =mainDeck    // r6 points to main deck
-
-	mov r8, #0           // Counter
-
-dealLoop:
-// Take card from deck and deal to player
-	mov r0, #0           // r0 = take first (0th) card
-	mov r1, r6           // r1 = from mainDeck
-	bl popCard
-	strb r0, [r4]        // Write card to p1Hand
-	add r4, r4, #1       // Increment p1Hand pointer
-	add r8, r8, #1       // Increment counter
-
-// Take card from deck and deal to CPU
-	mov r0, #0           // r0 = take first (0th) card
-	mov r1, r6           // r1 = from mainDeck
-	bl popCard
-	strb r0, [r5]        // Write card to p2Hand
-	add r5, r5, #1       // Increment p2Hand pointer
-	add r8, r8, #1       // Increment counter
-
-	cmp r8, #10          // Break when 10 cards have been dealt in total
-	beq dealLoopEnd
-	b dealLoop
-
-dealLoopEnd:
-	mov lr, r10          // 'Mini' epilogue
 	bx lr
 
 /*
