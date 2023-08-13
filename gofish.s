@@ -42,7 +42,7 @@ initDeck:
 	mov r10, lr
 
 	mov r4, #52          // r4 = # cards in sortedDeck
-	ldr r5, =sortedDeck  // r5 points to start of sortedDeck
+	ldr r5, =deck        // r5 points to start of actual deck
 
 // Initialize random generator with srand(time(0))
 	mov r0, #0
@@ -54,7 +54,11 @@ idLoop:
 	mov r1, r4           // max = # of remaining cards in sortedDeck
 	bl randNum
 	bl popCard           // Pass random number to popCard
+	strb r0, [r5]        // Load popped card to deck
+	                     // TO DO: Fix bug where " " has been loaded into deck
 
+	sub r4, r4, #1
+	add r5, r5, #1
 	b idLoop
 
 idEnd:
@@ -81,7 +85,7 @@ randNum:
 	add  r4, r4, #1      // r1 = max - min + 1
 	bl rand              // r0 = rand()
 
-	udiv r5, r0, r4      // r2 = rand() / (max-min+1)
+	udiv r5, r0, r4      // r5 = rand() / (max-min+1)
 	mls  r0, r5, r4, r0  // r0 = rand() % (max-min+1)
 	add  r0, r0, r6      // r0 = (rand() % (max-min+1)) + min
 
@@ -100,6 +104,11 @@ randNum:
 // PARAMETERS r0: card index (starting with 0)
 // RETURNS    r0: character representing card
 popCard: // TO DO: test what happens if card at N is " "
+
+// TO DO:
+// SERIOUS BUG: Often multiple cards are mysteriously deleted instead of one,
+// resulting in sortedDeck having less cards than the counter says it should
+
 // Prologue
 	sub sp, sp, #24      // Allocate space for registers
 	str r4, [sp, #0]     // Load registers into stack
