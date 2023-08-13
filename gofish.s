@@ -52,7 +52,7 @@ initDeck:
 idLoop:
 	mov r0, #0           // min = 0
 	mov r1, r4           // max = # of remaining cards in sortedDeck - 1
-	sub r4, r4, #1
+	sub r1, r1, #1
 	bl randNum
 	bl popCard           // Pass random number to popCard
 	strb r0, [r5]        // Load popped card to deck
