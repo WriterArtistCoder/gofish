@@ -108,8 +108,9 @@ popCard: // TO DO: test what happens if card at N is " "
 // TO DO:
 // Bug from 967a56 seems to be fixed?
 // Another bug: sometimes no cards are popped and a space is returned
-// This happens sometimes when random number and remaining cards in deck are equal,
-// but not always (see screenshots)
+
+// This happens because randNum has failed and produced a number outside
+// the proper range, usually just 1 to the right of proper range
 
 // Prologue
 	sub sp, sp, #24      // Allocate space for registers
