@@ -7,8 +7,8 @@
 // TO DO: print outputs to text logfile
 // TO DO: separate functions to separate files
 .data
-deck: .space 52
-sortedDeck: .asciz "222233334444555566667777888899990000JJJJQQQQKKKKAAAA" // 0 refers to the 10 card
+deck: .space 53          // Last char is unfilled, is a NUL character
+sortedDeck: .asciz "222233334444555566667777888899990000JJJJQQQQKKKKAAAA " // 0 refers to the 10 card
 
 .text
 .global main
@@ -106,8 +106,8 @@ randNum:
 popCard: // TO DO: test what happens if card at N is " "
 
 // TO DO:
-// SERIOUS BUG: Often multiple cards are mysteriously deleted instead of one,
-// resulting in sortedDeck having less cards than the counter says it should
+// Bug from 967a56 seems to be fixed?
+// Another bug: sometimes no cards are popped and a space is returned
 
 // Prologue
 	sub sp, sp, #24      // Allocate space for registers
@@ -128,12 +128,10 @@ pcLoop:
 	blt pcLoopIncr       // If less than index, continue loop
 
 	ldrbeq r6, [r5]      // If EQUAL to index, hold card's character
-	ldrb r8, [r5,+1]     // Load next char
-
-	cmp r8, #0           // If it's a NUL character
-	moveq r8, SPACE      // replace it with a SPACE
-	strb  r8, [r5]       // Either way, replace this char with the next
-	beq   pcLoopEnd      // If the char was NUL, break loop
+	ldrb r8, [r5,+1]     // Replace current char with the next
+	strb  r8, [r5]
+	cmp r8, SPACE        // If that next char is a SPACE
+	beq   pcLoopEnd      // Break loop
 
 pcLoopIncr:
 	add r4, r4, #1       // Increment counter
