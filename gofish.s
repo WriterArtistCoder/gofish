@@ -5,28 +5,30 @@
 .equ SPACE,         32   // ASCII for ' '
 .equ INPUT_SPACE,   48   // Space for holding input (high in case user enters too many chars)
                          // Should be divisible by 4
+.equ UPPERCASE,     223  // Constant to convert to uppercase
 
 // TO DO: print outputs to text logfile
 // TO DO: separate functions to separate files
 // TO DO: double check documentation
 .data
-input:       .space INPUT_SPACE
-inputErr:    .asciz "\033[91mFatal error: you entered too many characters and corrupted memory >:|\033[0m\n"
+input:         .space INPUT_SPACE
+fatalInputErr: .asciz "\033[91mFatal error: you entered too many characters and corrupted memory >:|\033[0m\n"
+inputErr:      .asciz "\033[91mWhat?\033[0m\n"
 
 // Decks, which are closed with a space and NUL character, and are filled with spaces when empty
-mainDeck:    .asciz "                                                     "
-sortedDeck:  .asciz "222233334444555566667777888899990000JJJJQQQQKKKKAAAA " // 0 refers to the 10 card
-p1Hand:      .asciz "                                                "
-p2Hand:      .asciz "                                                "
+mainDeck:      .asciz "                                                     "
+sortedDeck:    .asciz "222233334444555566667777888899990000JJJJQQQQKKKKAAAA " // 0 refers to the 10 card
+p1Hand:        .asciz "                                                "
+p2Hand:        .asciz "                                                "
 
-printDeck:   .asciz "\033[2mDECK: \033[0m%s\n"
-printP1Deck: .asciz " \033[93mYOU: \033[0m%s\n"
-printP2Deck: .asciz " \033[95mCPU: \033[0m%s\n"
+printDeck:     .asciz "\033[2mDECK: \033[0m%s\n"
+printP1Deck:   .asciz " \033[93mYOU: \033[0m%s\n"
+printP2Deck:   .asciz " \033[95mCPU: \033[0m%s\n"
 
-promptRank:  .asciz " \033[93;3mYou \033[0;3mask if the other player has a <2-10/J/Q/K/A>: \033[0m"
-pcts:        .asciz " %s"
+promptRank:    .asciz " \033[93;3mYou \033[0;3mask if the other player has a <2-10/J/Q/K/A>: \033[0m"
+pcts:          .asciz " %s"
 
-newline:     .asciz "\n"
+newline:       .asciz "\n"
 
 .text
 .global main
@@ -107,10 +109,10 @@ idLoop:
 	add r5, r5, #1
 
 	cmp r4, #0           // Break loop when 0 cards remain in sortedDeck
-	beq idLoopEnd
+	beq idEnd
 	b idLoop
 
-idLoopEnd:
+idEnd:
 	mov lr, r10          // 'Mini' epilogue
 	bx lr
 
@@ -145,10 +147,10 @@ dealLoop:
 	add r8, r8, #1       // Increment counter
 
 	cmp r8, #10          // Break when 10 cards have been dealt in total
-	beq dealLoopEnd
+	beq dealEnd
 	b dealLoop
 
-dealLoopEnd:
+dealEnd:
 	mov lr, r10          // 'Mini' epilogue
 	bx lr
 
@@ -160,8 +162,9 @@ dealLoopEnd:
 getRank:
 	mov r10, lr          // 'Mini' prologue
 
+grStart:
 	ldr r4, =input       // r4 points to temporary input storage
-	bl clearInput
+	bl clearInput        // TO DO: remove if unnecessary?
 
 	ldr r0, =promptRank
 	bl printf
@@ -170,17 +173,57 @@ getRank:
 	mov r1, r4
 	bl scanf
 
-// Check that user has not entered too many chars, corrupting data
+// Check that user has not entered way too many chars, corrupting data
 	add r4, r4, INPUT_SPACE-1 // Move pointer to last char
 	ldrb r5, [r4]
 	cmp r5, #0                // Check that last char is NUL
-	bne throwInputErr
+	bne throwFatalInputErr
 	sub r4, r4, INPUT_SPACE-1 // Move pointer back
 
 // Check that input is valid
-	// TO DO: implement
-	// START ON THIS!
+ // Read first char
+	ldrb r5, [r4]
 
+ // Is it a non-numeral card?
+	cmp r5, 'J
+	beq grValid
+	cmp r5, 'j
+	beq grUpper
+	cmp r5, 'Q
+	beq grValid
+	cmp r5, 'q
+	beq grUpper
+	cmp r5, 'K
+	beq grValid
+	cmp r5, 'k
+	beq grUpper
+	cmp r5, 'A
+	beq grValid
+	cmp r5, 'a
+	beq grUpper
+
+ // Else, is it a numeral card?
+	cmp r5, '1           // Throw error if first char is below '1' in ASCII
+	blt grInvalid
+	cmp r5, '9           // Or above '9'
+	bgt grInvalid
+
+grValid:
+	mov r0, r5
+	cmp r0, '1           // Check if first char = '1'
+	bne grEnd            // If not, return char
+	mov r0, '0           // If so, return '0', since the only rank that begins with 1 is 10,
+	b grEnd              // which is represented by a 0
+
+grUpper:                 // Convert char to uppercase, then go to grValid
+	and r5, r5, UPPERCASE
+	b grValid
+
+grInvalid:               // If input invalid,
+	bl throwInputErr     // throw error and re-prompt
+	b grStart
+
+grEnd:
 	mov lr, r10          // 'Mini' epilogue
 	bx lr
 
@@ -201,18 +244,39 @@ ciLoop:
 	cmp r1, r0
 	blt ciLoop
 
-ciLoopEnd:
+ciEnd:
 	bx lr
 
 
 
-// Throws input error and exits program
+// Throws fatal input error and exits program
+// PARAMETERS None
+// RETURNS    None
+throwFatalInputErr:
+	ldr r0, =fatalInputErr
+	bl printf
+	b done
+
+
+
+// Throws mild input error and exits program
 // PARAMETERS None
 // RETURNS    None
 throwInputErr:
+// Prologue
+	sub sp, sp, #8       // Allocate space for registers (sp rounded up to nearest 8)
+	str fp, [sp, #0]
+	str lr, [sp, #4]
+	add fp,  sp, #4      // Set fp
+
 	ldr r0, =inputErr
 	bl printf
-	b done
+
+// Epilogue
+	ldr fp, [sp, #0]    // Restore registers from stack
+	ldr lr, [sp, #4]
+	add sp, sp, #8      // Move sp back in place
+	bx lr
 
 
 
@@ -221,7 +285,7 @@ throwInputErr:
 // RETURNS    r0: random number
 randNum:
 // Prologue
-	sub sp, sp, #20      // Allocate space for registers
+	sub sp, sp, #24      // Allocate space for registers (sp rounded up to nearest 8)
 	str r4, [sp, #0]     // Load registers into stack
 	str r5, [sp, #4]
 	str r6, [sp, #8]
@@ -244,7 +308,7 @@ randNum:
 	ldr r6, [sp, #8]
 	ldr fp, [sp, #12]
 	ldr lr, [sp, #16]
-	add sp, sp, #20      // Move sp back in place
+	add sp, sp, #24      // Move sp back in place
 	bx lr
 
 
@@ -254,7 +318,7 @@ randNum:
 // RETURNS    r0: character representing card
 popCard:
 // Prologue
-	sub sp, sp, #24      // Allocate space for registers
+	sub sp, sp, #24      // Allocate space for registers (sp rounded up to nearest 8)
 	str r4, [sp, #0]     // Load registers into stack
 	str r5, [sp, #4]
 	str r6, [sp, #8]
@@ -275,14 +339,14 @@ pcLoop:
 	ldrb r8, [r5,+1]     // Replace current char with the next
 	strb  r8, [r5]
 	cmp r8, SPACE        // If that next char is a SPACE
-	beq   pcLoopEnd      // Break loop
+	beq pcEnd            // Break loop
 
 pcLoopIncr:
 	add r4, r4, #1       // Increment counter
 	add r5, r5, #1       // Increment pointer
 	b pcLoop
 
-pcLoopEnd:
+pcEnd:
 	mov r0, r6
 
 // Epilogue
