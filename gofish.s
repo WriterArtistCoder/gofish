@@ -20,6 +20,8 @@ mainDeck:      .asciz "                                                     "
 sortedDeck:    .asciz "222233334444555566667777888899990000JJJJQQQQKKKKAAAA " // 0 refers to the 10 card
 p1Hand:        .asciz "                                                "
 p2Hand:        .asciz "                                                "
+p1Pairs:       .space 1  // Number of pairs held by player
+p2Pairs:       .space 1  // Number of pairs held by CPU
 
 printDeck:     .asciz "\033[2mDECK: \033[0m%s\n"
 printP1Deck:   .asciz " \033[93mYOU: \033[0m%s\n"
@@ -71,10 +73,12 @@ main:
 	ldr r1, =p2Hand      // Pass result of getRank as r0, pointer to CPU's hand as r1
 	bl checkDeck         // Check deck for matching card
 
-	cmp r0, #0           // If no matches, "go fish"
+	cmp r0, #-1          // If no matches, "go fish"
 	bleq goFish
-	blne bookP2s         // If match found, pass pointer to card to bookP2s
-	                     // book card and lay down pair if possible
+	blne bookP2s         // If match found, CPU gives card to player
+	                     // pass pointer to card to bookP2s
+	
+
 
 // Print player's hand
 	ldr r0, =printP1Deck
@@ -282,23 +286,35 @@ gfLoop: // Move r4 to END of player's hand
 
 
 // Takes card from CPU's hand and moves to player's
-// PARAMETERS r0: Pointer to card to take
+// PARAMETERS r0: Index of card to take
 // RETURNS    None
 bookP2s:
 	mov r10, lr          // 'Mini' prologue
+
+	mov r8, r0           // r8 = index of desired card in CPU's hand
 	ldr r4, =p1Hand      // r4 = pointer to player's hand
+	mov r9, #0           // r9 = number of cards in player's hand
 
 bpLoop: // Move r4 to END of player's hand
 	add r4, r4, #1       // Increment pointer
+	add r9, r9, #1       // Increment counter
 	ldrb r5, [r4]
 	cmp r5, SPACE        // Check if char is a space
 	bne bpLoop           // If not, continue
 
 	ldr r5, =p2Hand      // r5 = pointer to CPU's hand
 
+// Check if player has the card already, therefore forming a pair
+	add r0, r5, r0       // r0 = pointer to card in CPU's hand
+	ldrb r0, [r0]        // r0 = char representing rank of that card
+	ldr r1, =p1Hand      // r1 = pointer to player's hand
+
+	bl checkDeck         // Check player's hand for the rank they're asking for
+	mov r6, r0           // Move result to r6
+
 // Take card from CPU's hand and move to player's
-	sub r0, r0, r5       // r0 = Index of card (pointer to card - pointer to start of CPU's hand)
-	ldr r1, =p2Hand      // r1 = Pointer to CPU's hand
+	mov r0, r8           // r0 = index of card in CPU's card
+	ldr r1, =p2Hand      // r1 = pointer to CPU's hand
 	bl popCard
 	strb r0, [r4]        // Write card to p1Hand
 
@@ -306,7 +322,28 @@ bpLoop: // Move r4 to END of player's hand
 	ldr r0, =printBookP2s
 	bl printf
 
-// Return to caller
+// If it forms a pair, lay pair down on "table"
+	cmp r6, #-1          // If it doesn't, return to caller
+	beq bpEnd
+
+ // Pop card that was already in hand
+	mov r0, r6           // r0 = Index of card that was already in hand
+	ldr r1, =p1Hand      // r1 = Pointer to player's hand
+	bl popCard
+
+ // Pop card that was just taken
+	mov r0, r9           // r0 = Index of card that was just taken from CPU
+	sub r0, r0, #1       // subtract 1, since a card was just removed from hand
+	ldr r1, =p1Hand      // r1 = Pointer to player's hand
+	bl popCard
+
+ // Increment pairs that player has
+	ldr r4, =p1Pairs
+	ldrb r5, [r4]
+	add r5, r5, #1
+	strb r5, [r4]
+
+bpEnd: // Return to caller
 	mov lr, r10          // 'Mini' epilogue
 	bx lr
 
@@ -447,7 +484,7 @@ pcEnd:
 
 // Check if a deck/hand contains a specific rank.
 // PARAMETERS r0: char representing rank, r1: pointer to the deck
-// RETURNS    r0: pointer to first card with matching rank, or 0 if not found
+// RETURNS    r0: index of first card with matching rank, or -1 if not found
 checkDeck:
 // Prologue
 	sub sp, sp, #16      // Allocate space for registers (sp rounded up to nearest 8)
@@ -458,23 +495,25 @@ checkDeck:
 	str lr, [sp, #16]
 	add fp,  sp, #16     // Set fp
 
+	mov r4, #0           // r4 is counter
 	mov r5, r1           // r5 points to the deck in question
 	mov r6, SPACE        // r6 will hold char representing the card
 
 cdLoop:
 	ldrb r6, [r5]        // Load card's char into r6
 	cmp r6, r0           // Check if equal to rank
-	beq cdEnd            // If so, return pointer
+	beq cdEnd            // If so, return counter
 
 	cmp r6, SPACE        // Check if end of deck
-	moveq r5, #0         // If so, return 0
+	moveq r4, #-1        // If so, return -1
 	beq cdEnd
 
+	add r4, r4, #1       // Increment counter
 	add r5, r5, #1       // Increment pointer
 	b cdLoop
 
 cdEnd:
-	mov r0, r5           // Return pointer
+	mov r0, r4           // Return counter
 
 // Epilogue
 	ldr r4, [sp, #0]     // Restore registers from stack
