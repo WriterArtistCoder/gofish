@@ -25,6 +25,7 @@ printDeck:     .asciz "\033[2mDECK: \033[0m%s\n"
 printP1Deck:   .asciz " \033[93mYOU: \033[0m%s\n"
 printP2Deck:   .asciz " \033[95mCPU: \033[0m%s\n"
 printGoFish:   .asciz " \033[95mCPU: Go fish.\n \033[93mYOU draw a %c.\033[0m\n\n"
+printBookP2s:  .asciz " \033[95mCPU: Yes, I have that card T_T.\033[0m\n\n"
 
 promptRank:    .asciz " \033[93;3mYou \033[0;3mask if the other player has a <2-10/J/Q/K/A>: \033[0m"
 pcts:          .asciz " %s"
@@ -71,7 +72,10 @@ main:
 	bl checkDeck         // Check deck for matching card
 
 	cmp r0, #0           // If no matches, "go fish"
-	beq goFish
+	bleq goFish
+	blne bookP2s         // If match found, pass pointer to card to bookP2s
+	                     // book card and lay down pair if possible
+
 // Print player's hand
 	ldr r0, =printP1Deck
 	ldr r1, =p1Hand
@@ -260,17 +264,46 @@ gfLoop: // Move r4 to END of player's hand
 	cmp r5, SPACE        // Check if char is a space
 	bne gfLoop           // If not, continue
 
-	ldr r5, =mainDeck    // r6 points to main deck
-
 // Take card from deck and deal to player
 	mov r0, #0           // r0 = take first (0th) card
-	mov r1, r6           // r1 = from mainDeck
+	ldr r1, =mainDeck    // r1 = from mainDeck
 	bl popCard
 	strb r0, [r4]        // Write card to p1Hand
 
 // Print 'go fish' and drawn card
 	mov r1, r0           // r1 = drawn card
 	ldr r0, =printGoFish
+	bl printf
+
+// Return to caller
+	mov lr, r10          // 'Mini' epilogue
+	bx lr
+
+
+
+// Takes card from CPU's hand and moves to player's
+// PARAMETERS r0: Pointer to card to take
+// RETURNS    None
+bookP2s:
+	mov r10, lr          // 'Mini' prologue
+	ldr r4, =p1Hand      // r4 = pointer to player's hand
+
+bpLoop: // Move r4 to END of player's hand
+	add r4, r4, #1       // Increment pointer
+	ldrb r5, [r4]
+	cmp r5, SPACE        // Check if char is a space
+	bne bpLoop           // If not, continue
+
+	ldr r5, =p2Hand      // r5 = pointer to CPU's hand
+
+// Take card from CPU's hand and move to player's
+	sub r0, r0, r5       // r0 = Index of card (pointer to card - pointer to start of CPU's hand)
+	ldr r1, =p2Hand      // r1 = Pointer to CPU's hand
+	bl popCard
+	strb r0, [r4]        // Write card to p1Hand
+
+// CPU says they have the card
+	ldr r0, =printBookP2s
 	bl printf
 
 // Return to caller
