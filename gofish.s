@@ -24,6 +24,7 @@ p2Hand:        .asciz "                                                "
 printDeck:     .asciz "\033[2mDECK: \033[0m%s\n"
 printP1Deck:   .asciz " \033[93mYOU: \033[0m%s\n"
 printP2Deck:   .asciz " \033[95mCPU: \033[0m%s\n"
+printGoFish:   .asciz " \033[95mCPU: Go fish.\n \033[93mYOU draw a %c.\033[0m\n\n"
 
 promptRank:    .asciz " \033[93;3mYou \033[0;3mask if the other player has a <2-10/J/Q/K/A>: \033[0m"
 pcts:          .asciz " %s"
@@ -68,6 +69,21 @@ main:
 	bl getRank
 	ldr r1, =p2Hand      // Pass result of getRank as r0, pointer to CPU's hand as r1
 	bl checkDeck         // Check deck for matching card
+
+	cmp r0, #0           // If no matches, "go fish"
+	beq goFish
+// Print player's hand
+	ldr r0, =printP1Deck
+	ldr r1, =p1Hand
+	bl printf
+// Print CPU's hand
+	ldr r0, =printP2Deck
+	ldr r1, =p2Hand
+	bl printf
+// Print main deck
+	ldr r0, =printDeck
+	ldr r1, =mainDeck
+	bl printf
 
 done:
 // Epilogue
@@ -228,6 +244,39 @@ grInvalid:               // If input invalid,
 grEnd:
 	mov lr, r10          // 'Mini' epilogue
 	bx lr
+
+
+
+// CPU says "Go fish", player draws a card
+// PARAMETERS None
+// RETURNS    None
+goFish:
+	mov r10, lr          // 'Mini' prologue
+	ldr r4, =p1Hand      // r4 points to start of player's hand
+
+gfLoop: // Move r4 to END of player's hand
+	add r4, r4, #1       // Increment pointer
+	ldrb r5, [r4]
+	cmp r5, SPACE        // Check if char is a space
+	bne gfLoop           // If not, continue
+
+	ldr r5, =mainDeck    // r6 points to main deck
+
+// Take card from deck and deal to player
+	mov r0, #0           // r0 = take first (0th) card
+	mov r1, r6           // r1 = from mainDeck
+	bl popCard
+	strb r0, [r4]        // Write card to p1Hand
+
+// Print 'go fish' and drawn card
+	mov r1, r0           // r1 = drawn card
+	ldr r0, =printGoFish
+	bl printf
+
+// Return to caller
+	mov lr, r10          // 'Mini' epilogue
+	bx lr
+
 
 
 // Clears all data in the 'input' variable
