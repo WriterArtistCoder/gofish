@@ -66,6 +66,8 @@ main:
 
 // Prompt player to ask CPU for a rank
 	bl getRank
+	ldr r1, =p2Hand      // Pass result of getRank as r0, pointer to CPU's hand as r1
+	bl checkDeck         // Check deck for matching card
 
 done:
 // Epilogue
@@ -158,7 +160,7 @@ dealEnd:
 
 // Prompts the player to ask for a rank.
 // PARAMETERS None
-// RETURNS    r0: rank
+// RETURNS    r0: char representing rank
 getRank:
 	mov r10, lr          // 'Mini' prologue
 
@@ -296,7 +298,7 @@ randNum:
 	mov  r6, r0          // r6 = min
 	sub  r4, r1, r6      // r1 = max - min
 	add  r4, r4, #1      // r1 = max - min + 1
-	bl rand              // r0 = rand()
+	bl   rand            // r0 = rand()
 
 	udiv r5, r0, r4      // r5 = rand() / (max-min+1)
 	mls  r0, r5, r4, r0  // r0 = rand() % (max-min+1)
@@ -333,7 +335,7 @@ popCard:
 
 pcLoop:
 	cmp r4, r0           // Check if reached correct index
-	blt pcLoopIncr       // If less than index, continue loop
+	blt pcIncr           // If less than index, continue loop
 
 	ldrbeq r6, [r5]      // If EQUAL to index, hold card's character
 	ldrb r8, [r5,+1]     // Replace current char with the next
@@ -341,7 +343,7 @@ pcLoop:
 	cmp r8, SPACE        // If that next char is a SPACE
 	beq pcEnd            // Break loop
 
-pcLoopIncr:
+pcIncr:
 	add r4, r4, #1       // Increment counter
 	add r5, r5, #1       // Increment pointer
 	b pcLoop
@@ -358,6 +360,50 @@ pcEnd:
 	ldr lr, [sp, #20]
 	add sp, sp, #24      // Move sp back in place
 	bx lr
+
+
+
+// Check if a deck/hand contains a specific rank.
+// PARAMETERS r0: char representing rank, r1: pointer to the deck
+// RETURNS    r0: pointer to first card with matching rank, or 0 if not found
+checkDeck:
+// Prologue
+	sub sp, sp, #16      // Allocate space for registers (sp rounded up to nearest 8)
+	str r4, [sp, #0]     // Load registers into stack
+	str r5, [sp, #4]
+	str r6, [sp, #8]
+	str fp, [sp, #12]
+	str lr, [sp, #16]
+	add fp,  sp, #16     // Set fp
+
+	mov r5, r1           // r5 points to the deck in question
+	mov r6, SPACE        // r6 will hold char representing the card
+
+cdLoop:
+	ldrb r6, [r5]        // Load card's char into r6
+	cmp r6, r0           // Check if equal to rank
+	beq cdEnd            // If so, return pointer
+
+	cmp r6, SPACE        // Check if end of deck
+	moveq r5, #0         // If so, return 0
+	beq cdEnd
+
+	add r5, r5, #1       // Increment pointer
+	b cdLoop
+
+cdEnd:
+	mov r0, r5           // Return pointer
+
+// Epilogue
+	ldr r4, [sp, #0]     // Restore registers from stack
+	ldr r5, [sp, #4]
+	ldr r6, [sp, #8]
+	ldr fp, [sp, #12]
+	ldr lr, [sp, #16]
+	add sp, sp, #16      // Move sp back in place
+	bx lr
+
+
 
 /*
 FUNCTIONS:
