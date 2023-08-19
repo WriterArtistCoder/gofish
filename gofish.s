@@ -27,9 +27,15 @@ printDeck:     .asciz "\033[2mDECK: \033[0m%s\n"
 printP1Deck:   .asciz " \033[93mYOU: \033[0m%s\n"
 printP2Deck:   .asciz " \033[95mCPU: \033[0m%s\n"
 printGoFish:   .asciz " \033[95mCPU: Go fish.\n \033[93mYOU draw a %c.\033[0m\n\n"
-printBookP2s:  .asciz " \033[95mCPU: Yes, I have that card T_T.\033[0m\n\n"
+printGoFishTen: .asciz " \033[95mCPU: Go fish.\n \033[93mYOU draw a 10.\033[0m\n\n"
+printBookP2s:  .asciz " \033[95mCPU: Yes, I have that card T_T.\033[0m\n"
+printBookP1s:  .asciz " \033[93mYOU: Yes, I have that card T_T.\033[0m\n"
+printPairP1:   .asciz " \033[93mYOU booked a pair of %ss! They are laid on the 'table'.\033[0m\n"
+printPairP2:   .asciz " \033[95mCPU booked a pair of %ss! They are laid on the 'table'.\033[0m\n"
+ten:           .asciz "10"
 
 promptRank:    .asciz " \033[93;3mYou \033[0;3mask if the other player has a <2-10/J/Q/K/A>: \033[0m"
+printCPUAsk:   .asciz " \033[95;3mCPU \033[0;3masks if you have a %s."
 pcts:          .asciz " %s"
 
 newline:       .asciz "\n"
@@ -77,9 +83,14 @@ main:
 	bleq goFish
 	blne bookP2s         // If match found, CPU gives card to player
 	                     // pass pointer to card to bookP2s
-	
+/*
+// CPU asks player for a rank
+	bl p2GetRank
 
-
+// Print \n
+	ldr r0, =newline
+	bl printf
+*/
 // Print player's hand
 	ldr r0, =printP1Deck
 	ldr r1, =p1Hand
@@ -276,7 +287,17 @@ gfLoop: // Move r4 to END of player's hand
 
 // Print 'go fish' and drawn card
 	mov r1, r0           // r1 = drawn card
+	cmp r1, '0           // Replace '0' with '10' if needed
+	beq gfZero
 	ldr r0, =printGoFish
+	bl printf
+
+// Return to caller
+	mov lr, r10          // 'Mini' epilogue
+	bx lr
+
+gfZero:
+	ldr r0, =printGoFishTen
 	bl printf
 
 // Return to caller
@@ -337,6 +358,13 @@ bpLoop: // Move r4 to END of player's hand
 	ldr r1, =p1Hand      // r1 = Pointer to player's hand
 	bl popCard
 
+ // Print that pair was created
+	mov r1, r0           // r1 = Char representing card
+	cmp r1, '0           // Replace '0' with '10' if needed
+	ldreq r1, =ten
+	ldr r0, =printPairP1
+	bl printf
+
  // Increment pairs that player has
 	ldr r4, =p1Pairs
 	ldrb r5, [r4]
@@ -347,6 +375,76 @@ bpEnd: // Return to caller
 	mov lr, r10          // 'Mini' epilogue
 	bx lr
 
+
+// CPU asks player for a card, player says they do/don't have that, CPU may form a pair
+// PARAMETERS None
+// RETURNS    None
+
+p2GetRank:
+	mov r10, lr          // 'Mini' prologue
+
+	mov r8, r0           // r8 = index of desired card in player's hand
+	ldr r4, =p2Hand      // r4 = pointer to CPU's hand
+	mov r9, #0           // r9 = number of cards in CPU's hand
+
+pgLoop: // Move r4 to END of CPU's hand
+	add r4, r4, #1       // Increment pointer
+	add r9, r9, #1       // Increment counter
+	ldrb r5, [r4]
+	cmp r5, SPACE        // Check if char is a space
+	bne pgLoop           // If not, continue
+
+	ldr r5, =p1Hand      // r5 = pointer to player's hand
+
+// Check if CPU has the card already, therefore forming a pair
+	add r0, r5, r0       // r0 = pointer to card in player's hand
+	ldrb r0, [r0]        // r0 = char representing rank of that card
+	ldr r1, =p1Hand      // r1 = pointer to CPU's hand
+
+	bl checkDeck         // Check player's hand for the rank they're asking for
+	mov r6, r0           // Move result to r6
+
+// Take card from player's hand and move to CPU's
+	mov r0, r8           // r0 = index of card in player's card
+	ldr r1, =p1Hand      // r1 = pointer to player's hand
+	bl popCard
+	strb r0, [r4]        // Write card to p2Hand
+
+// Player says they have the card
+	ldr r0, =printBookP1s
+	bl printf
+
+// If it forms a pair, lay pair down on "table"
+	cmp r6, #-1          // If it doesn't, return to caller
+	beq bpEnd
+
+ // Pop card that was already in hand
+	mov r0, r6           // r0 = Index of card that was already in hand
+	ldr r1, =p2Hand      // r1 = Pointer to CPU's hand
+	bl popCard
+
+ // Pop card that was just taken
+	mov r0, r9           // r0 = Index of card that was just taken from player
+	sub r0, r0, #1       // subtract 1, since a card was just removed from hand
+	ldr r1, =p2Hand      // r1 = Pointer to CPU's hand
+	bl popCard
+
+ // Print that pair was created
+	mov r1, r0           // r1 = Char representing card
+	cmp r1, '0           // Replace '0' with '10' if needed
+	ldreq r1, =ten
+	ldr r0, =printPairP2
+	bl printf
+
+ // Increment pairs that player has
+	ldr r4, =p2Pairs
+	ldrb r5, [r4]
+	add r5, r5, #1
+	strb r5, [r4]
+
+pgEnd: // Return to caller
+	mov lr, r10          // 'Mini' epilogue
+	bx lr
 
 
 // Clears all data in the 'input' variable
