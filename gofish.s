@@ -26,14 +26,15 @@ p2Pairs:         .space 1  // Number of pairs held by CPU
 printDeck:       .asciz "\033[2mDECK: \033[0m%s\n"
 printP1Deck:     .asciz " \033[93mYOU: \033[0m%s\n"
 printP2Deck:     .asciz " \033[95mCPU: \033[0m%s\n"
+printScore:      .asciz " \033[93m%d \033[0m- \033[95m%d \033[0m\n"
 printGoFish:     .asciz " \033[95mCPU: Go fish.\n \033[93mYOU draw a %c.\033[0m\n\n"
 printGoFishTen:  .asciz " \033[95mCPU: Go fish.\n \033[93mYOU draw a 10.\033[0m\n\n"
 printCGoFish:    .asciz " \033[93mYOU: Go fish.\n \033[95mCPU draws a %c.\033[0m\n\n"
 printCGoFishTen: .asciz " \033[93mYOU: Go fish.\n \033[95mCPU draws a 10.\033[0m\n\n"
 printBookP2s:    .asciz " \033[95mCPU: Yes, I have that card T_T.\033[0m\n"
 printBookP1s:    .asciz " \033[93mYOU: Yes, I have that card T_T.\033[0m\n"
-printPairP1:     .asciz " \033[93mYOU booked a pair of %ss! They are laid on the 'table'.\033[0m\n"
-printPairP2:     .asciz " \033[95mCPU booked a pair of %ss! They are laid on the 'table'.\033[0m\n"
+printPairP1:     .asciz " \033[93mYOU booked a pair of %cs! They are laid on the 'table'.\033[0m\n"
+printPairP2:     .asciz " \033[95mCPU booked a pair of %cs! They are laid on the 'table'.\033[0m\n"
 ten:             .asciz "10"
 
 promptRank:      .asciz " \033[93;3mYou \033[0;3mask if the other player has a <2-10/J/Q/K/A>: \033[0m"
@@ -62,18 +63,8 @@ main:
 	bl deal
 
 mainLoop:
-// Print player's hand
-	ldr r0, =printP1Deck
-	ldr r1, =p1Hand
-	bl printf
-// Print CPU's hand
-	ldr r0, =printP2Deck
-	ldr r1, =p2Hand
-	bl printf
-// Print main deck
-	ldr r0, =printDeck
-	ldr r1, =mainDeck
-	bl printf
+	bl dispDecks         // Print hands and deck
+	bl dispScore         // Print number of pairs held by each player
 
 // Print \n
 	ldr r0, =newline
@@ -89,18 +80,8 @@ mainLoop:
 	blne bookP2s         // If match found, CPU gives card to player
 	                     // pass pointer to card to bookP2s
 
-// Print player's hand
-	ldr r0, =printP1Deck
-	ldr r1, =p1Hand
-	bl printf
-// Print CPU's hand
-	ldr r0, =printP2Deck
-	ldr r1, =p2Hand
-	bl printf
-// Print main deck
-	ldr r0, =printDeck
-	ldr r1, =mainDeck
-	bl printf
+	bl dispDecks         // Print hands and deck
+	bl dispScore         // Print number of pairs held by each player
 
 // Print \n
 	ldr r0, =newline
@@ -516,6 +497,49 @@ cbpLoop: // Move r4 to END of CPU's hand
 	strb r5, [r4]
 
 cbpEnd: // Return to caller
+	mov lr, r10          // 'Mini' epilogue
+	bx lr
+
+
+
+// Prints player's hand, CPU's hand, and deck in that order.
+// PARAMETERS None
+// RETURNS    None
+dispDecks:
+	mov r10, lr          // 'Mini' prologue
+
+// Print player's hand
+	ldr r0, =printP1Deck
+	ldr r1, =p1Hand
+	bl printf
+// Print CPU's hand
+	ldr r0, =printP2Deck
+	ldr r1, =p2Hand
+	bl printf
+// Print main deck
+	ldr r0, =printDeck
+	ldr r1, =mainDeck
+	bl printf
+
+	mov lr, r10          // 'Mini' epilogue
+	bx lr
+
+
+
+// Prints number of pairs held by player and CPU.
+// PARAMETERS None
+// RETURNS    None
+dispScore:
+	mov r10, lr          // 'Mini' prologue
+
+// Print player's hand
+	ldr  r0, =printScore
+	ldr  r1, =p1Pairs
+	ldrb r1, [r1]
+	ldr  r2, =p2Pairs
+	ldrb r2, [r2]
+	bl printf
+
 	mov lr, r10          // 'Mini' epilogue
 	bx lr
 
