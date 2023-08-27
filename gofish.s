@@ -290,7 +290,10 @@ gfLoop: // Move r4 to END of player's hand
 	ldreq r0, =printGoFishTen
 	bl printf
 
-// TO DO:!!! Lay down pair if drawn card forms a pair
+// If possible, pair the cards and lay on the table
+	ldrb r0, [r4]        // r0 = char representing card
+	mov r1, '1           // r1 = '1' reprsents player, not CPU
+	bl pairIfPossible
 
 // Return to caller
 	mov lr, r10          // 'Mini' epilogue
@@ -413,7 +416,10 @@ cgfLoop: // Move r4 to END of CPU's hand
 	ldreq r0, =printCGoFishTen
 	bl printf
 
-// TO DO:!!! Lay down pair if drawn card forms a pair
+// If possible, pair the cards and lay on the table
+	ldrb r0, [r4]        // r0 = char representing card
+	mov r1, '2           // r1 = '2' reprsents CPU, not player
+	bl pairIfPossible
 
 // Return to caller
 	mov lr, r10          // 'Mini' epilogue
