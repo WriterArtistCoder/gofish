@@ -58,7 +58,9 @@ main:
 	add fp, sp, #4       // Set frame pointer
 
 	bl initDeck          // Initialize the deck
-	                     // TO DO: Book any pairs HERE
+	                     // TO DO: Book any pairs HERE (working on it!)
+
+
 	ldr r0, =printDeck   // And print it
 	ldr r1, =mainDeck
 	bl printf
@@ -292,7 +294,7 @@ gfLoop: // Move r4 to END of player's hand
 
 // If possible, pair the cards and lay on the table
 	ldrb r0, [r4]        // r0 = char representing card
-	mov r1, '1           // r1 = '1' reprsents player, not CPU
+	mov r1, #1           // r1 = 1 reprsents player, not CPU
 	bl pairIfPossible
 
 // Return to caller
@@ -332,7 +334,7 @@ bpLoop: // Move r4 to END of player's hand
 
 // If possible, pair the cards and lay on the table
 	ldrb r0, [r4]        // r0 = char representing card
-	mov r1, '1           // r1 = '1' reprsents player, not CPU
+	mov r1, #1           // r1 = 1 reprsents player, not CPU
 	bl pairIfPossible
 
 bpEnd: // Return to caller
@@ -418,7 +420,7 @@ cgfLoop: // Move r4 to END of CPU's hand
 
 // If possible, pair the cards and lay on the table
 	ldrb r0, [r4]        // r0 = char representing card
-	mov r1, '2           // r1 = '2' reprsents CPU, not player
+	mov r1, #2           // r1 = 2 reprsents CPU, not player
 	bl pairIfPossible
 
 // Return to caller
@@ -458,7 +460,7 @@ cbpLoop: // Move r4 to END of CPU's hand
 
 // If possible, pair the cards and lay on the table
 	ldrb r0, [r4]        // r0 = char representing card
-	mov r1, '2           // r1 = '2' reprsents player, not CPU
+	mov r1, #2           // r1 = 2 reprsents player, not CPU
 	bl pairIfPossible
 
 cbpEnd: // Return to caller
@@ -563,8 +565,8 @@ throwInputErr:
 
 
 // Looks for the first 2 cards of a certain rank, and if found pairs and lays them on the table.
-// PARAMETERS r0: char representing card, r1: '1' if player holds card, '2' if CPU holds card
-// RETURNS    None
+// PARAMETERS r0: char representing card, r1: 1 if player holds card, 2 if CPU holds card
+// RETURNS    r0: 0 if no pair found, 1 if pair found
 pairIfPossible:
 // Prologue
 	sub sp, sp, #24      // Allocate space for registers (sp rounded up to nearest 8)
@@ -580,7 +582,7 @@ pairIfPossible:
 	mov r4, r0           // r4 = char representing card
 	mov r5, r1           // r5 = flag representing which player
 
-	cmp r5, '1           // If player, set deck pointer to p1Hand
+	cmp r5, #1           // If player, set deck pointer to p1Hand
 	ldreq r6, =p1Hand    // Else (if CPU), set deck pointer to p2Hand
 	ldrne r6, =p2Hand
 
@@ -589,7 +591,10 @@ pairIfPossible:
 	mov r0, r4           // r0 = char representing card
 	mov r1, r6           // r1 = deck pointer
 	bl checkDeck
+
 	mov r8, r0           // r8 = index of first instance
+	cmp r8, #-1          // If not found, return
+	beq piFailure
 
  // Find 2nd instance of rank
 	mov r0, r4           // r0 = char representing card
@@ -597,22 +602,26 @@ pairIfPossible:
 	add r1, r1, r8       // (points to REST of deck past first instance)
 	add r1, r1, #1
 	bl checkDeck
+
 	mov r9, r0           // r9 = index of second instance
+	cmp r9, #-1          // If not found, return
+	beq piFailure
+
+	add r9, r9, r8       // Fixes r9: index is counted from deck pointer
+	add r9, r9, #1       // Deck pointer points to REST of deck not START, so must be accounted for
 
 // Delete both cards
- // Reset deck pointer
-	sub r1, r1, #1
-	sub r1, r1, r8
  // Pop first instance
 	mov r0, r8
 	mov r1, r6
 	bl popCard
  // Pop second instance
+	sub r9, r9, #1       // Since a card has been deleted, correct index
 	mov r0, r9
 	mov r1, r6
 	bl popCard
 
-	cmp r5, '1           // Check if is player and not CPU
+	cmp r5, #1           // Check if is player and not CPU
 	bne piCPU
 
 // Increment pairs, if is player (overwrites r8, r9)
@@ -628,6 +637,9 @@ pairIfPossible:
 	ldreq r0, =printPairP1Ten
 	bl printf
 
+// Flag that pair was created (return 1)
+	mov r0, #1
+
 	b piEnd
 
 piCPU:
@@ -638,12 +650,19 @@ piCPU:
 	strb r9, [r8]
 
 // Print that pair was created, if is CPU
-	ldr r0, =printPairP1
+	ldr r0, =printPairP2
 	mov r1, r4
 	cmp r4, '0           // Replace '0' with '10' if needed
-	ldreq r0, =printPairP1Ten
+	ldreq r0, =printPairP2Ten
 	bl printf
 
+// Flag that pair was created (return 1)
+	mov r0, #1
+	b piEnd
+
+piFailure:
+// Flag that pair was not created (return 0)
+	mov r0, #0
 	b piEnd
 
 piEnd:
