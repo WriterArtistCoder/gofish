@@ -58,14 +58,12 @@ main:
 	add fp, sp, #4       // Set frame pointer
 
 	bl initDeck          // Initialize the deck
-	                     // TO DO: Book any pairs HERE (working on it!)
-
-
 	ldr r0, =printDeck   // And print it
 	ldr r1, =mainDeck
 	bl printf
 
 	bl deal
+	bl initPairing       // TO DO: Book any pairs HERE (working on it!)
 
 mainLoop:
 	bl dispDecks         // Print hands and deck
@@ -193,6 +191,42 @@ dealEnd:
 
 
 
+// Pairs and lays on table any duplicate cards in P1 and P2 hands.
+// PARAMETERS None
+// RETURNS    None
+initPairing:
+	mov r10, lr          // 'Mini' prologue
+	ldr r4, =p1Hand      // r4 points to start of player's hand
+
+ipLoop1:
+	ldrb r0, [r4]        // r0 = char representing card
+	cmp r0, SPACE        // Check if reached end
+	beq ip2              // if so, go to CPU's hand
+	mov r1, #1           // r1 = 1 represents player, not CPU
+	bl pairIfPossible
+
+	add r4, r4, #1
+	b ipLoop1
+
+ip2:
+	ldr r4, =p2Hand      // r4 points to start of CPU's hand
+
+ipLoop2:
+	ldrb r0, [r4]        // r0 = char representing card
+	cmp r0, SPACE        // Check if reached end
+	beq ipEnd            // if so, exit
+	mov r1, #2           // r1 = 2 represents CPU, not player
+	bl pairIfPossible
+
+	add r4, r4, #1
+	b ipLoop2
+
+ipEnd:
+	mov lr, r10
+	bx lr
+
+
+
 // Prompts the player to ask for a rank.
 // PARAMETERS None
 // RETURNS    r0: char representing rank
@@ -294,7 +328,7 @@ gfLoop: // Move r4 to END of player's hand
 
 // If possible, pair the cards and lay on the table
 	ldrb r0, [r4]        // r0 = char representing card
-	mov r1, #1           // r1 = 1 reprsents player, not CPU
+	mov r1, #1           // r1 = 1 represents player, not CPU
 	bl pairIfPossible
 
 // Return to caller
@@ -334,7 +368,7 @@ bpLoop: // Move r4 to END of player's hand
 
 // If possible, pair the cards and lay on the table
 	ldrb r0, [r4]        // r0 = char representing card
-	mov r1, #1           // r1 = 1 reprsents player, not CPU
+	mov r1, #1           // r1 = 1 represents player, not CPU
 	bl pairIfPossible
 
 bpEnd: // Return to caller
@@ -420,7 +454,7 @@ cgfLoop: // Move r4 to END of CPU's hand
 
 // If possible, pair the cards and lay on the table
 	ldrb r0, [r4]        // r0 = char representing card
-	mov r1, #2           // r1 = 2 reprsents CPU, not player
+	mov r1, #2           // r1 = 2 represents CPU, not player
 	bl pairIfPossible
 
 // Return to caller
@@ -460,7 +494,7 @@ cbpLoop: // Move r4 to END of CPU's hand
 
 // If possible, pair the cards and lay on the table
 	ldrb r0, [r4]        // r0 = char representing card
-	mov r1, #2           // r1 = 2 reprsents player, not CPU
+	mov r1, #2           // r1 = 2 represents player, not CPU
 	bl pairIfPossible
 
 cbpEnd: // Return to caller
