@@ -63,6 +63,9 @@ main:
 	bl printf
 
 	bl deal
+	bl dispDecks         // Print hands and deck
+	bl dispScore         // Print number of pairs held by each player
+
 	bl initPairing       // TO DO: Book any pairs HERE (working on it!)
 
 mainLoop:
@@ -195,7 +198,13 @@ dealEnd:
 // PARAMETERS None
 // RETURNS    None
 initPairing:
-	mov r10, lr          // 'Mini' prologue
+// Prologue
+	sub sp, sp, #8       // Allocate space for registers (sp rounded up to nearest 8)
+	str r4, [sp, #0]     // Load registers into stack
+	str fp, [sp, #4]
+	str lr, [sp, #8]
+	add fp,  sp, #8      // Set fp
+
 	ldr r4, =p1Hand      // r4 points to start of player's hand
 
 ipLoop1:
@@ -205,7 +214,10 @@ ipLoop1:
 	mov r1, #1           // r1 = 1 represents player, not CPU
 	bl pairIfPossible
 
-	add r4, r4, #1
+	cmp r0, #1           // If a pair was found and laid on table,
+	subeq r4, r4, #1     // decrement r4 pointer
+
+	add r4, r4, #1       // Increment r4 pointer & loop again! :D
 	b ipLoop1
 
 ip2:
@@ -218,11 +230,18 @@ ipLoop2:
 	mov r1, #2           // r1 = 2 represents CPU, not player
 	bl pairIfPossible
 
-	add r4, r4, #1
+	cmp r0, #1           // If a pair was found and laid on table,
+	subeq r4, r4, #1     // decrement r4 pointer
+
+	add r4, r4, #1       // Increment r4 pointer & loop again! :D
 	b ipLoop2
 
 ipEnd:
-	mov lr, r10
+// Epilogue
+	ldr r4, [sp, #0]     // Restore registers from stack
+	ldr fp, [sp, #4]
+	ldr lr, [sp, #8]
+	add sp, sp, #8       // Move sp back in place
 	bx lr
 
 
