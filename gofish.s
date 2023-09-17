@@ -622,7 +622,7 @@ throwInputErr:
 // RETURNS    r0: 0 if no pair found, 1 if pair found
 pairIfPossible:
 // Prologue
-	sub sp, sp, #24      // Allocate space for registers (sp rounded up to nearest 8)
+	sub sp, sp, #32      // Allocate space for registers (sp rounded up to nearest 8)
 	str r4, [sp, #0]     // Load registers into stack
 	str r5, [sp, #4]
 	str r6, [sp, #8]
@@ -630,7 +630,7 @@ pairIfPossible:
 	str r9, [sp, #16]
 	str fp, [sp, #20]
 	str lr, [sp, #24]
-	add fp,  sp, #24     // Set fp
+	add fp,  sp, #32     // Set fp
 
 	mov r4, r0           // r4 = char representing card
 	mov r5, r1           // r5 = flag representing which player
@@ -727,7 +727,7 @@ piEnd:
 	ldr r9, [sp, #16]
 	ldr fp, [sp, #20]
 	ldr lr, [sp, #24]
-	add sp, sp, #24      // Move sp back in place
+	add sp, sp, #32      // Move sp back in place
 	bx lr
 
 
@@ -818,13 +818,13 @@ pcEnd:
 // RETURNS    r0: index of first card with matching rank, or -1 if not found
 checkDeck:
 // Prologue
-	sub sp, sp, #16      // Allocate space for registers (sp rounded up to nearest 8)
+	sub sp, sp, #24      // Allocate space for registers (sp rounded up to nearest 8)
 	str r4, [sp, #0]     // Load registers into stack
 	str r5, [sp, #4]
 	str r6, [sp, #8]
 	str fp, [sp, #12]
 	str lr, [sp, #16]
-	add fp,  sp, #16     // Set fp
+	add fp,  sp, #24     // Set fp
 
 	mov r4, #0           // r4 is counter
 	mov r5, r1           // r5 points to the deck in question
@@ -852,7 +852,7 @@ cdEnd:
 	ldr r6, [sp, #8]
 	ldr fp, [sp, #12]
 	ldr lr, [sp, #16]
-	add sp, sp, #16      // Move sp back in place
+	add sp, sp, #24      // Move sp back in place
 	bx lr
 
 
