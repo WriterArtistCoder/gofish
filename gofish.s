@@ -66,7 +66,7 @@ main:
 	bl dispDecks         // Print hands and deck
 	bl dispScore         // Print number of pairs held by each player
 
-	bl initPairing       // TO DO: Book any pairs HERE (working on it!)
+	bl initPairing       // Any duplicate cards in hands are booked
 
 mainLoop:
 	bl dispDecks         // Print hands and deck
@@ -196,16 +196,18 @@ dealEnd:
 
 // Pairs and lays on table any duplicate cards in P1 and P2 hands, when the cards are dealt at the start.
 // PARAMETERS None
-// RETURNS    None
+// RETURNS    r0: 1 if pair was found (NEEDS TESTING)
 initPairing:
 // Prologue
-	sub sp, sp, #8       // Allocate space for registers (sp rounded up to nearest 8)
+	sub sp, sp, #16       // Allocate space for registers (sp rounded up to nearest 8)
 	str r4, [sp, #0]     // Load registers into stack
-	str fp, [sp, #4]
-	str lr, [sp, #8]
-	add fp,  sp, #8      // Set fp
+	str r5, [sp, #4]     // Load registers into stack
+	str fp, [sp, #8]
+	str lr, [sp, #12]
+	add fp,  sp, #16     // Set fp
 
 	ldr r4, =p1Hand      // r4 points to start of player's hand
+	mov r5, #0           // r5 is flag for whether pair(s) was found
 
 ipLoop1:
 	ldrb r0, [r4]        // r0 = char representing card
@@ -216,6 +218,7 @@ ipLoop1:
 
 	cmp r0, #1           // If a pair was found and laid on table,
 	subeq r4, r4, #1     // decrement r4 pointer
+	moveq r5, #1         // And set r5 flag to 1
 
 	add r4, r4, #1       // Increment r4 pointer & loop again! :D
 	b ipLoop1
@@ -232,16 +235,20 @@ ipLoop2:
 
 	cmp r0, #1           // If a pair was found and laid on table,
 	subeq r4, r4, #1     // decrement r4 pointer
+	moveq r5, #1         // And set r5 flag to 1
 
 	add r4, r4, #1       // Increment r4 pointer & loop again! :D
 	b ipLoop2
 
 ipEnd:
+	mov r0, r5           // Return r5
+
 // Epilogue
 	ldr r4, [sp, #0]     // Restore registers from stack
-	ldr fp, [sp, #4]
-	ldr lr, [sp, #8]
-	add sp, sp, #8       // Move sp back in place
+	ldr r5, [sp, #4]
+	ldr fp, [sp, #8]
+	ldr lr, [sp, #12]
+	add sp, sp, #16      // Move sp back in place
 	bx lr
 
 
