@@ -194,7 +194,7 @@ dealEnd:
 
 
 
-// Pairs and lays on table any duplicate cards in P1 and P2 hands.
+// Pairs and lays on table any duplicate cards in P1 and P2 hands, when the cards are dealt at the start.
 // PARAMETERS None
 // RETURNS    None
 initPairing:
