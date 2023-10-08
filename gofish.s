@@ -67,10 +67,17 @@ main:
 	bl dispScore         // Print number of pairs held by each player
 
 	bl initPairing       // Any duplicate cards in hands are booked
+	mov r10, r0          // If cards were booked, r10 = 1. Otherwise, r10 = 0
 
 mainLoop:
+	cmp r10, #0          // If it's the start of the game and no cards were paired,
+	beq mainLoop2        // skip printing hands, deck, and score
+
 	bl dispDecks         // Print hands and deck
 	bl dispScore         // Print number of pairs held by each player
+
+mainLoop2:
+	mov r10, #1          // Set flag to always print hands, deck, and score
 
 // Print \n
 	ldr r0, =newline
