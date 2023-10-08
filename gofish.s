@@ -96,6 +96,8 @@ mainLoop2:
 	bl dispDecks         // Print hands and deck
 	bl dispScore         // Print number of pairs held by each player
 
+	bl checkGG           // Check if game is over - if either hand or the deck are out
+
 // Print \n
 	ldr r0, =newline
 	bl printf
@@ -109,6 +111,8 @@ mainLoop2:
 	bleq cgoFish
 	blne bookP1s         // If match found, CPU gives card to player
 	                     // pass pointer to card to bookP1s
+
+	bl checkGG           // Check if game is over - if either hand or the deck are out
 
 	b mainLoop
 
@@ -869,6 +873,45 @@ cdEnd:
 	add sp, sp, #24      // Move sp back in place
 	bx lr
 
+
+
+// Check if the game is over - if either hand or the deck is empty.
+// PARAMETERS None
+// RETURNS    r0: 0 if game not over, 1 if game over
+checkGG:
+// Prologue
+	sub sp, sp, #16       // Allocate space for registers (sp rounded up to nearest 8)
+	str r4, [sp, #0]     // Load registers into stack
+	str fp, [sp, #4]
+	str lr, [sp, #8]
+	add fp,  sp, #16     // Set fp
+	
+	ldrb r4, =p1Hand
+	cmp r4, SPACE
+	beq cgOver
+
+	ldrb r4, =p2Hand
+	cmp r4, SPACE
+	beq cgOver
+
+	ldrb r4, =mainDeck
+	cmp r4, SPACE
+	beq cgOver
+
+// No decks are empty, return 0
+	mov r0, #0
+	b cgEnd
+
+cgOver:
+	mov r0, #1
+
+cgEnd:
+// Epilogue
+	ldr r4, [sp, #0]     // Restore registers from stack
+	ldr fp, [sp, #4]
+	ldr lr, [sp, #8]
+	add sp, sp, #16      // Move sp back in place
+	bx lr
 
 
 /*
