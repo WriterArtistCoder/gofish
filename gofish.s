@@ -16,7 +16,7 @@ fatalInputErr:   .asciz "\033[91mFatal error: you entered too many characters an
 inputErr:        .asciz "\033[91mWhat?\033[0m\n"
 
 // Decks, which are closed with a space and NUL character, and are filled with spaces when empty
-mainDeck:        .asciz "                                                     "
+mainDeck:        .asciz "222233334444555566667777888899990000JJJJQQQQKKKKAAAA "
 sortedDeck:      .asciz "222233334444555566667777888899990000JJJJQQQQKKKKAAAA " // 0 refers to the 10 card
 p1Hand:          .asciz "                                                "
 p2Hand:          .asciz "                                                "
@@ -46,6 +46,8 @@ pcts:            .asciz " %s"
 
 newline:         .asciz "\n"
 
+gg:              .asciz "GAME OVER\n"
+
 .text
 .global main
 .type   main, %function
@@ -57,7 +59,7 @@ main:
 
 	add fp, sp, #4       // Set frame pointer
 
-	bl initDeck          // Initialize the deck
+	//bl initDeck          // Initialize the deck
 	ldr r0, =printDeck   // And print it
 	ldr r1, =mainDeck
 	bl printf
@@ -97,6 +99,9 @@ mainLoop2:
 	bl dispScore         // Print number of pairs held by each player
 
 	bl checkGG           // Check if game is over - if either hand or the deck are out
+	cmp r0, #1           // If over, print "GAME OVER" (TO DO: actually end the game)
+	ldr r0, =gg
+	bleq printf
 
 // Print \n
 	ldr r0, =newline
@@ -113,6 +118,9 @@ mainLoop2:
 	                     // pass pointer to card to bookP1s
 
 	bl checkGG           // Check if game is over - if either hand or the deck are out
+	cmp r0, #1           // If over, print "GAME OVER" (TO DO: actually end the game)
+	ldr r0, =gg
+	bleq printf
 
 	b mainLoop
 
