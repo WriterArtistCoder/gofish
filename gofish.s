@@ -47,6 +47,8 @@ pcts:            .asciz " %s"
 newline:         .asciz "\n"
 
 gg:              .asciz "GAME OVER\n"
+TEST2:           .asciz "Tryna detect if we are done" // TO DO: Put this in all places where checkGG is called!
+TESTING:         .asciz "Detectin if we are done"
 
 .text
 .global main
@@ -97,6 +99,9 @@ mainLoop2:
 
 	bl dispDecks         // Print hands and deck
 	bl dispScore         // Print number of pairs held by each player
+
+	ldr r0, =TEST2
+	bl printf
 
 	bl checkGG           // Check if game is over - if either hand or the deck are out
 	cmp r0, #1           // If over, print "GAME OVER" (TO DO: actually end the game)
@@ -888,21 +893,27 @@ cdEnd:
 // RETURNS    r0: 0 if game not over, 1 if game over
 checkGG:
 // Prologue
-	sub sp, sp, #16       // Allocate space for registers (sp rounded up to nearest 8)
+	sub sp, sp, #24      // Allocate space for registers (sp rounded up to nearest 8)
 	str r4, [sp, #0]     // Load registers into stack
 	str fp, [sp, #4]
 	str lr, [sp, #8]
 	add fp,  sp, #16     // Set fp
+
+	ldr r0, =TESTING
+	bl printf
 	
-	ldrb r4, =p1Hand
+	ldr r3, =p1Hand
+	ldrb r4, [r3]
 	cmp r4, SPACE
 	beq cgOver
 
-	ldrb r4, =p2Hand
+	ldr r3, =p2Hand
+	ldrb r4, [r3]
 	cmp r4, SPACE
 	beq cgOver
 
-	ldrb r4, =mainDeck
+	ldr r3, =mainDeck
+	ldrb r4, [r3]
 	cmp r4, SPACE
 	beq cgOver
 
@@ -918,7 +929,7 @@ cgEnd:
 	ldr r4, [sp, #0]     // Restore registers from stack
 	ldr fp, [sp, #4]
 	ldr lr, [sp, #8]
-	add sp, sp, #16      // Move sp back in place
+	add sp, sp, #24      // Move sp back in place
 	bx lr
 
 

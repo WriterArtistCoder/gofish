@@ -1,0 +1,18 @@
+PURMANENT
+
+x/1sb 0x21134
+Address for p1Hand
+
+x/1xb 0x21164
+Null terminator for p1Hand
+
+x/1sb 0x21165
+Address for p2Hand
+
+x/1xb 0x21195
+Null terminator for p2Hand
+
+TEMPOBOBARY
+
+b 560
+b 905
