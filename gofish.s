@@ -16,7 +16,7 @@ fatalInputErr:   .asciz "\033[91mFatal error: you entered too many characters an
 inputErr:        .asciz "\033[91mWhat?\033[0m\n"
 
 // Decks, which are closed with a space and NUL character, and are filled with spaces when empty
-mainDeck:        .asciz "222233334444555566667777888899990000JJJJQQQQKKKKAAAA "
+mainDeck:        .asciz "                                                     "
 sortedDeck:      .asciz "222233334444555566667777888899990000JJJJQQQQKKKKAAAA " // 0 refers to the 10 card
 p1Hand:          .asciz "                                                "
 p2Hand:          .asciz "                                                "
@@ -50,8 +50,6 @@ ggPrint:         .asciz "It's only coding\nIsn't it amazing when you know\nEvery
 ggPrint2:        .asciz "Thank you for coming\nThank you for playing\nThank you for watching the show\n"
 ggP1:            .asciz "\n\n\033[93mYOU WIN!!! :D\033[0m\n"
 ggP2:            .asciz "\n\n\033[95mYOU LOSE BOZO!!! >:D\033[0m\n"
-TEST2:           .asciz "Tryna detect if we are done" // TO DO: Put this in all places where checkGG is called!
-TESTING:         .asciz "Detectin if we are done"
 
 .text
 .global main
@@ -64,7 +62,7 @@ main:
 
 	add fp, sp, #4       // Set frame pointer
 
-	//bl initDeck          // Initialize the deck
+	bl initDeck          // Initialize the deck
 	ldr r0, =printDeck   // And print it
 	ldr r1, =mainDeck
 	bl printf
