@@ -46,7 +46,10 @@ pcts:            .asciz " %s"
 
 newline:         .asciz "\n"
 
-gg:              .asciz "GAME OVER\n"
+ggPrint:         .asciz "It's only coding\nIsn't it amazing when you know\nEvery line of code you see is\nInstructions and bytes and pieces\n"
+ggPrint2:        .asciz "Thank you for coming\nThank you for playing\nThank you for watching the show\n"
+ggP1:            .asciz "\n\n\033[93mYOU WIN!!! :D\033[0m\n"
+ggP2:            .asciz "\n\n\033[95mYOU LOSE BOZO!!! >:D\033[0m\n"
 TEST2:           .asciz "Tryna detect if we are done" // TO DO: Put this in all places where checkGG is called!
 TESTING:         .asciz "Detectin if we are done"
 
@@ -100,13 +103,9 @@ mainLoop2:
 	bl dispDecks         // Print hands and deck
 	bl dispScore         // Print number of pairs held by each player
 
-	ldr r0, =TEST2
-	bl printf
-
 	bl checkGG           // Check if game is over - if either hand or the deck are out
-	cmp r0, #1           // If over, print "GAME OVER" (TO DO: actually end the game)
-	ldr r0, =gg
-	bleq printf
+	cmp r0, #1           // If over, end the game
+	bleq gg
 
 // Print \n
 	ldr r0, =newline
@@ -123,9 +122,8 @@ mainLoop2:
 	                     // pass pointer to card to bookP1s
 
 	bl checkGG           // Check if game is over - if either hand or the deck are out
-	cmp r0, #1           // If over, print "GAME OVER" (TO DO: actually end the game)
-	ldr r0, =gg
-	bleq printf
+	cmp r0, #1           // If over, end the game
+	bleq gg
 
 	b mainLoop
 
@@ -898,9 +896,6 @@ checkGG:
 	str fp, [sp, #4]
 	str lr, [sp, #8]
 	add fp,  sp, #16     // Set fp
-
-	ldr r0, =TESTING
-	bl printf
 	
 	ldr r3, =p1Hand
 	ldrb r4, [r3]
@@ -931,6 +926,22 @@ cgEnd:
 	ldr lr, [sp, #8]
 	add sp, sp, #24      // Move sp back in place
 	bx lr
+
+// Ends the game.
+// PARAMETERS None
+// RETURNS    None
+gg:
+	ldr r0, =ggP1
+	bl printf
+
+	ldr r0, =ggPrint
+	bl printf
+
+	ldr r0, =ggPrint2
+	bl printf
+
+    mov r7, #1
+    swi 0
 
 
 /*
